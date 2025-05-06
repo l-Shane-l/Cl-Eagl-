@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
       if (it != token_rules.end()) {
         std::cout << it->second << " " << it->first << " null" << std::endl;
       } else {
-        std::cerr << "[Line " << current_line
+        std::cout << "[Line " << current_line
                   << "] Error: Unexpected character: " << c << std::endl;
       }
     }
