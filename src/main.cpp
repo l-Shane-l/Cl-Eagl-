@@ -35,7 +35,6 @@ int main(int argc, char *argv[]) {
     for (char c : file_contents) {
       if (c == '\n') { // Specifically check for newline
         current_line++;
-        continue; // Skip the newline character
       }
       if (std::isspace(static_cast<unsigned char>(c))) {
         continue;
