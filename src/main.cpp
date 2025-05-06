@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
   }
 
   const std::string command = argv[1];
+  bool in_error = false;
 
   if (command == "tokenize") {
     // Define the direct mapping from input character to token type string
@@ -30,6 +31,7 @@ int main(int argc, char *argv[]) {
 
     std::string file_contents = read_file_contents(argv[2]);
     int current_line = 1;
+
     for (char c : file_contents) {
       if (c == '\n') { // Specifically check for newline
         current_line++;
@@ -45,7 +47,7 @@ int main(int argc, char *argv[]) {
       } else {
         std::cerr << "[Line " << current_line
                   << "] Error: Unexpected character: " << c << std::endl;
-        return 65;
+        in_error = true;
       }
     }
     std::cout << "EOF  null" << std::endl;
@@ -53,7 +55,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "Unknown command: " << command << std::endl;
     return 1;
   }
-
+  if (in_error)
+    return 65;
   return 0;
 }
 
