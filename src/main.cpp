@@ -22,11 +22,11 @@ int main(int argc, char *argv[]) {
   if (command == "tokenize") {
     // Define the direct mapping from input character to token type string
     const std::unordered_map<char, std::string> token_rules = {
-        {'(', "LEFT_PAREN"},
-        {')', "RIGHT_PAREN"},
-        {'{', "LEFT_BRACE"},
-        {'}', "RIGHT_BRACE"},
-    };
+        {'(', "LEFT_PAREN"},  {')', "RIGHT_PAREN"}, {'{', "LEFT_BRACE"},
+        {'}', "RIGHT_BRACE"}, {',', "COMMA"},       {'.', "DOT"},
+        {'-', "MINUS"},       {'+', "PLUS"},        {';', "SEMICOLON"},
+        {'/', "SLASH"},       {'*', "STAR"},        {'(', "LEFT_PAREN"},
+        {')', "RIGHT_PAREN"}, {'{', "LEFT_BRACE"},  {'}', "RIGHT_BRACE"}};
 
     std::string file_contents = read_file_contents(argv[2]);
 
