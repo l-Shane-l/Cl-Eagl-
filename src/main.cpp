@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
         {')', "RIGHT_PAREN"}, {'{', "LEFT_BRACE"},  {'}', "RIGHT_BRACE"}};
 
     std::string file_contents = read_file_contents(argv[2]);
-    int current_line = 1;
+    int current_line = 0;
 
     for (char c : file_contents) {
       if (c == '\n') { // Specifically check for newline
