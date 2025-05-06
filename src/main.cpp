@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 std::string read_file_contents(const std::string &filename);
 
@@ -10,10 +11,6 @@ int main(int argc, char *argv[]) {
   // Disable output buffering
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
-
-  // You can use print statements as follows for debugging, they'll be visible
-  // when running tests.
-  std::cerr << "Logs from your program will appear here!" << std::endl;
 
   if (argc < 3) {
     std::cerr << "Usage: ./your_program tokenize <filename>" << std::endl;
@@ -23,17 +20,27 @@ int main(int argc, char *argv[]) {
   const std::string command = argv[1];
 
   if (command == "tokenize") {
+    // Define the direct mapping from input character to token type string
+    const std::unordered_map<char, std::string> token_rules = {
+        {'(', "LEFT_PAREN"}, {')', "RIGHT_PAREN"}
+        // To extend for other single-character tokens, add them here.
+    };
+
     std::string file_contents = read_file_contents(argv[2]);
 
-    // Uncomment this block to pass the first stage
-    //
-    if (!file_contents.empty()) {
-      std::cerr << "Scanner not implemented" << std::endl;
-      return 1;
-    }
-    std::cout << "EOF  null" << std::endl; // Placeholder, remove this line when
-                                           // implementing the scanner
+    for (char c : file_contents) {
+      if (std::isspace(static_cast<unsigned char>(c))) {
+        continue;
+      }
 
+      auto it = token_rules.find(c);
+      if (it != token_rules.end()) {
+        std::cout << it->second << " " << it->first << " null" << std::endl;
+      } else {
+        std::cerr << "[Line ?] Error: Unexpected character: " << c << std::endl;
+      }
+    }
+    std::cout << "EOF  null" << std::endl;
   } else {
     std::cerr << "Unknown command: " << command << std::endl;
     return 1;
