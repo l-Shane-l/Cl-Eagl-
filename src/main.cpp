@@ -29,8 +29,12 @@ int main(int argc, char *argv[]) {
         {')', "RIGHT_PAREN"}, {'{', "LEFT_BRACE"},  {'}', "RIGHT_BRACE"}};
 
     std::string file_contents = read_file_contents(argv[2]);
-
+    int current_line = 1;
     for (char c : file_contents) {
+      if (c == '\n') { // Specifically check for newline
+        current_line++;
+        continue; // Skip the newline character
+      }
       if (std::isspace(static_cast<unsigned char>(c))) {
         continue;
       }
@@ -39,7 +43,8 @@ int main(int argc, char *argv[]) {
       if (it != token_rules.end()) {
         std::cout << it->second << " " << it->first << " null" << std::endl;
       } else {
-        std::cerr << "[Line ?] Error: Unexpected character: " << c << std::endl;
+        std::cerr << "[Line " << current_line
+                  << "] Error: Unexpected character: " << c << std::endl;
       }
     }
     std::cout << "EOF  null" << std::endl;
