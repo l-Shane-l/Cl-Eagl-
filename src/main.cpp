@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
       if (it != token_rules.end()) {
         std::cout << it->second << " " << it->first << " null" << std::endl;
       } else {
-        std::cout << "[Line 1] Error: Unexpected character: " << c << std::endl;
+        std::cerr << "[Line N] Error: Unexpected character: " << c << std::endl;
         in_error = true;
       }
     }
@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
   }
   if (in_error)
     return 65;
+
   return 0;
 }
 
