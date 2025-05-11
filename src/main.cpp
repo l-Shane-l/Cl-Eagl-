@@ -1,6 +1,6 @@
-#include <cctype> // For std::isspace, std::isdigit, std::isalpha
-#include <cmath>
-#include <cstdio>
+#include <cctype> // For std::isspace, std::isdigit, std::isalpha, std::isalnum
+#include <cmath>  // For std::modf
+#include <cstdio> // For snprintf
 #include <filesystem>
 #include <fstream>
 #include <functional> // For std::function
@@ -14,9 +14,9 @@
 #include <utility> // For std::pair
 #include <vector>
 
-// --- Forward Declarations & Structs ---
+// --- Forward Declarations, Structs, Helper functions ---
 
-// read_file_contents (remains the same C++17 version)
+// read_file_contents (remains the same)
 [[nodiscard]] std::optional<std::string>
 read_file_contents(std::string_view filename_sv) {
   std::filesystem::path file_path = filename_sv;
@@ -30,7 +30,7 @@ read_file_contents(std::string_view filename_sv) {
   return buffer.str();
 }
 
-// TrieNode and TokenTrie (remain the same as the last version)
+// TrieNode and TokenTrie (for OPERATORS primarily now)
 struct TrieNode {
   std::unordered_map<char, std::unique_ptr<TrieNode>> children;
   std::optional<std::string_view> token_type;
@@ -38,9 +38,9 @@ struct TrieNode {
   bool isEndOfToken() const { return token_type.has_value(); }
 };
 
-class TokenTrie {
+class OperatorTrie { // Renamed for clarity
 public:
-  TokenTrie() : root(std::make_unique<TrieNode>()) {}
+  OperatorTrie() : root(std::make_unique<TrieNode>()) {}
 
   void insert(std::string_view lexeme, std::string_view tokenType) {
     TrieNode *current_node = root.get();
@@ -77,41 +77,49 @@ private:
   std::unique_ptr<TrieNode> root;
 };
 
-// Scanning Context to pass to matcher functions
+// Scanning Context
 struct ScanContext {
-  const std::string_view &source_view; // Reference to the full source
-  size_t &current_pos;   // Reference to the current position index
-  int &current_line;     // Reference to the current line number
-  bool &in_error_flag;   // Reference to the global error flag
-  const TokenTrie &trie; // Reference to the populated Trie
+  const std::string_view &source_view;
+  size_t &current_pos;
+  int &current_line;
+  bool &in_error_flag;
+  const OperatorTrie &op_trie; // Changed to OperatorTrie
+  const std::unordered_map<std::string_view, std::string_view>
+      &keywords; // Added keywords map
 
-  // Constructor
   ScanContext(const std::string_view &src_view, size_t &pos, int &line,
-              bool &err_flag, const TokenTrie &t)
+              bool &err_flag, const OperatorTrie &operator_trie,
+              const std::unordered_map<std::string_view, std::string_view> &kws)
       : source_view(src_view), current_pos(pos), current_line(line),
-        in_error_flag(err_flag), trie(t) {}
+        in_error_flag(err_flag), op_trie(operator_trie), keywords(kws) {}
 
-  // Helper to get the remaining source view from current_pos
-  std::string_view remaining() const {
-    if (current_pos >= source_view.length()) {
-      return {}; // Empty view
-    }
+  std::string_view remaining() const { /* ... same ... */
+    if (current_pos >= source_view.length())
+      return {};
     return source_view.substr(current_pos);
   }
-
-  // Helper to check if current_pos is at end
-  bool isAtEnd() const { return current_pos >= source_view.length(); }
-
-  // Helper to get current character
-  char currentChar() const { return source_view[current_pos]; }
+  bool isAtEnd() const { /* ... same ... */
+    return current_pos >= source_view.length();
+  }
+  char currentChar() const { /* ... same ... */
+    return source_view[current_pos];
+  }
 };
 
-// Type alias for our matcher functions
 using MatcherFunction = std::function<bool(ScanContext &)>;
 
-// --- Matcher Function Implementations ---
+// --- Character Type Helper Functions ---
+bool isIdentifierStartChar(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+bool isIdentifierPartChar(char c) {
+  return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+}
 
-bool scanNewline(ScanContext &ctx) {
+// --- Matcher Function Implementations ---
+// scanNewline, scanWhitespace, scanComment, scanStringLiteral (remain the same)
+// scanNumberLiteral and formatDoubleForLoxLiteral (remain the same)
+bool scanNewline(ScanContext &ctx) { /* ... same ... */
   if (!ctx.isAtEnd() && ctx.currentChar() == '\n') {
     ctx.current_line++;
     ctx.current_pos++;
@@ -119,8 +127,7 @@ bool scanNewline(ScanContext &ctx) {
   }
   return false;
 }
-
-bool scanWhitespace(ScanContext &ctx) {
+bool scanWhitespace(ScanContext &ctx) { /* ... same ... */
   if (!ctx.isAtEnd() && ctx.currentChar() != '\n' &&
       std::isspace(static_cast<unsigned char>(ctx.currentChar()))) {
     ctx.current_pos++;
@@ -128,43 +135,35 @@ bool scanWhitespace(ScanContext &ctx) {
   }
   return false;
 }
-
-bool scanComment(ScanContext &ctx) {
+bool scanComment(ScanContext &ctx) { /* ... same ... */
   std::string_view remaining = ctx.remaining();
   if (remaining.length() >= 2 && remaining[0] == '/' && remaining[1] == '/') {
     while (!ctx.isAtEnd() && ctx.currentChar() != '\n') {
       ctx.current_pos++;
     }
-    // The newline itself (if any) will be handled by scanNewline in the next
-    // iteration
     return true;
   }
   return false;
 }
-
-bool scanStringLiteral(ScanContext &ctx) {
+bool scanStringLiteral(ScanContext &ctx) { /* ... same ... */
   if (!ctx.isAtEnd() && ctx.currentChar() == '"') {
-    size_t string_start_original_pos = ctx.current_pos; // For full lexeme
+    size_t string_start_original_pos = ctx.current_pos;
     int string_start_line = ctx.current_line;
-
-    ctx.current_pos++; // Consume opening "
+    ctx.current_pos++;
     std::string literal_value;
     bool string_terminated = false;
-
     while (!ctx.isAtEnd()) {
       char char_in_string = ctx.currentChar();
       if (char_in_string == '"') {
         string_terminated = true;
-        ctx.current_pos++; // Consume closing "
+        ctx.current_pos++;
         break;
       }
-      if (char_in_string == '\n') {
+      if (char_in_string == '\n')
         ctx.current_line++;
-      }
       literal_value += char_in_string;
       ctx.current_pos++;
     }
-
     if (string_terminated) {
       std::string_view lexeme =
           ctx.source_view.substr(string_start_original_pos,
@@ -175,92 +174,102 @@ bool scanStringLiteral(ScanContext &ctx) {
                 << "] Error: Unterminated string." << std::endl;
       ctx.in_error_flag = true;
     }
-    return true; // Attempted to scan a string
+    return true;
   }
   return false;
 }
-
-// Helper function to format the double literal value for Lox output
-std::string formatDoubleForLoxLiteral(
-    double val) {   // original_lexeme is not needed with this logic
-  char buffer[128]; // Buffer for snprintf
-
+std::string formatDoubleForLoxLiteral(double val) { /* ... same ... */
+  char buffer[128];
   double integer_part;
-  // std::modf splits 'val' into its integer and fractional parts.
-  // If the fractional part is 0.0, the number is a whole number.
   if (std::modf(val, &integer_part) == 0.0) {
-    // It's a whole number (e.g., 42.0, 40.0), format as "XX.0"
     snprintf(buffer, sizeof(buffer), "%.1f", val);
   } else {
-    // It has a non-zero fractional part, use %g for compact representation
-    // This handles cases like 9282.7580 -> "9282.758" correctly as per Test
-    // Case 2
     snprintf(buffer, sizeof(buffer), "%.15g", val);
   }
   return std::string(buffer);
 }
-
-bool scanNumberLiteral(ScanContext &ctx) {
+bool scanNumberLiteral(ScanContext &ctx) { /* ... same ... */
   if (ctx.isAtEnd() ||
       !std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
     return false;
   }
-
   size_t start_pos = ctx.current_pos;
-
-  // Consume integer part
   while (!ctx.isAtEnd() &&
          std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
     ctx.current_pos++;
   }
-
-  // Look for fractional part
   if (!ctx.isAtEnd() && ctx.currentChar() == '.' &&
       (ctx.current_pos + 1 < ctx.source_view.length() &&
        std::isdigit(
            static_cast<unsigned char>(ctx.source_view[ctx.current_pos + 1])))) {
-
-    ctx.current_pos++; // Consume the '.'
+    ctx.current_pos++;
     while (!ctx.isAtEnd() &&
            std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
       ctx.current_pos++;
     }
   }
-
   std::string_view lexeme =
       ctx.source_view.substr(start_pos, ctx.current_pos - start_pos);
-
   double literal_double_val;
   try {
     literal_double_val = std::stod(std::string(lexeme));
-  } catch (const std::out_of_range &oor) {
+  } catch (const std::out_of_range &) {
     std::cerr << "[line " << ctx.current_line
               << "] Error: Number literal out of range: " << lexeme
               << std::endl;
     ctx.in_error_flag = true;
     return true;
-  } catch (const std::invalid_argument &ia) {
+  } catch (const std::invalid_argument &) {
     std::cerr << "[line " << ctx.current_line
               << "] Error: Invalid number format (stod failed): " << lexeme
               << std::endl;
     ctx.in_error_flag = true;
     return true;
   }
-
-  // Use the revised helper function
   std::string literal_str_output =
       formatDoubleForLoxLiteral(literal_double_val);
-
   std::cout << "NUMBER " << lexeme << " " << literal_str_output << std::endl;
-
   return true;
 }
 
-bool scanWithTrie(ScanContext &ctx) {
+// New/Revised Matcher for Identifiers and Keywords
+bool scanIdentifierOrKeyword(ScanContext &ctx) {
+  if (ctx.isAtEnd() || !isIdentifierStartChar(ctx.currentChar())) {
+    return false; // Not starting with a character valid for an identifier
+  }
+
+  size_t start_pos = ctx.current_pos;
+  // Consume the first character (already checked by isIdentifierStartChar)
+  ctx.current_pos++;
+
+  // Consume subsequent characters that are part of the identifier
+  while (!ctx.isAtEnd() && isIdentifierPartChar(ctx.currentChar())) {
+    ctx.current_pos++;
+  }
+
+  std::string_view lexeme =
+      ctx.source_view.substr(start_pos, ctx.current_pos - start_pos);
+
+  std::string_view token_type;
+  // Check if the lexeme is a reserved keyword
+  if (auto it = ctx.keywords.find(lexeme); it != ctx.keywords.end()) {
+    token_type = it->second; // It's a keyword
+  } else {
+    token_type = "IDENTIFIER"; // It's a user-defined identifier
+  }
+
+  std::cout << token_type << " " << lexeme << " null" << std::endl;
+
+  return true; // Successfully scanned an identifier or keyword
+}
+
+// Renamed scanWithTrie to scanOperator, uses op_trie from context
+bool scanOperator(ScanContext &ctx) {
   if (ctx.isAtEnd())
     return false;
 
-  auto match_result = ctx.trie.searchLongestMatch(ctx.remaining());
+  // op_trie is now passed via ScanContext
+  auto match_result = ctx.op_trie.searchLongestMatch(ctx.remaining());
   size_t matched_length = match_result.first;
   std::optional<std::string_view> matched_type_opt = match_result.second;
 
@@ -271,44 +280,6 @@ bool scanWithTrie(ScanContext &ctx) {
     return true;
   }
   return false;
-}
-
-// Helper to check if a character can be the start of an identifier
-bool isIdentifierStart(char c) {
-  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
-}
-
-// Helper to check if a character can be part of an identifier (after the first
-// char)
-bool isIdentifierChar(char c) {
-  return std::isalpha(static_cast<unsigned char>(c)) ||
-         std::isdigit(static_cast<unsigned char>(c)) || c == '_';
-}
-
-bool scanIdentifier(ScanContext &ctx) {
-  if (ctx.isAtEnd() || !isIdentifierStart(ctx.currentChar())) {
-    return false; // Not starting with a character valid for an identifier
-  }
-
-  size_t start_pos = ctx.current_pos;
-  // First char is already confirmed by isIdentifierStart, so consume it
-  ctx.current_pos++;
-
-  // Consume subsequent characters that are part of the identifier
-  while (!ctx.isAtEnd() && isIdentifierChar(ctx.currentChar())) {
-    ctx.current_pos++;
-  }
-
-  std::string_view lexeme =
-      ctx.source_view.substr(start_pos, ctx.current_pos - start_pos);
-
-  // By this point, scanWithTrie (which has higher priority in our matchers
-  // list) would have already matched any keywords. So, if we reach here,
-  // 'lexeme' is a user-defined identifier.
-
-  std::cout << "IDENTIFIER " << lexeme << " null" << std::endl;
-
-  return true; // Successfully scanned an identifier
 }
 
 int main(int argc, char *argv[]) {
@@ -325,45 +296,38 @@ int main(int argc, char *argv[]) {
   bool in_error = false;
 
   if (command == "tokenize") {
-    TokenTrie token_matcher_trie;
-    // Populate Trie with operators and keywords
-    token_matcher_trie.insert("==", "EQUAL_EQUAL");
-    token_matcher_trie.insert("!=", "BANG_EQUAL");
-    token_matcher_trie.insert("<=", "LESS_EQUAL");
-    token_matcher_trie.insert(">=", "GREATER_EQUAL");
-    token_matcher_trie.insert("(", "LEFT_PAREN");
-    token_matcher_trie.insert(")", "RIGHT_PAREN");
-    token_matcher_trie.insert("{", "LEFT_BRACE");
-    token_matcher_trie.insert("}", "RIGHT_BRACE");
-    token_matcher_trie.insert(",", "COMMA");
-    token_matcher_trie.insert(".", "DOT");
-    token_matcher_trie.insert("-", "MINUS");
-    token_matcher_trie.insert("+", "PLUS");
-    token_matcher_trie.insert(";", "SEMICOLON");
-    token_matcher_trie.insert("*", "STAR");
-    token_matcher_trie.insert("=", "EQUAL");
-    token_matcher_trie.insert("!", "BANG");
-    token_matcher_trie.insert("<", "LESS");
-    token_matcher_trie.insert(">", "GREATER");
-    token_matcher_trie.insert("/", "SLASH");
-    token_matcher_trie.insert("and", "AND");
-    token_matcher_trie.insert("class", "CLASS");
-    token_matcher_trie.insert("else", "ELSE");
-    token_matcher_trie.insert("false", "FALSE_KW");
-    token_matcher_trie.insert("for", "FOR");
-    token_matcher_trie.insert("fun", "FUN");
-    token_matcher_trie.insert("if", "IF");
-    token_matcher_trie.insert("nil", "NIL");
-    token_matcher_trie.insert("or", "OR");
-    token_matcher_trie.insert("print", "PRINT");
-    token_matcher_trie.insert("return", "RETURN");
-    token_matcher_trie.insert("super", "SUPER");
-    token_matcher_trie.insert("this", "THIS");
-    token_matcher_trie.insert("true", "TRUE_KW");
-    token_matcher_trie.insert("var", "VAR");
-    token_matcher_trie.insert("while", "WHILE");
-    // Add your Irish keywords here: e.g., token_matcher_trie.insert("má",
-    // "IF_IRISH");
+    OperatorTrie operator_trie; // Trie for operators
+    // Populate operator_trie ONLY with operators
+    operator_trie.insert("==", "EQUAL_EQUAL");
+    operator_trie.insert("!=", "BANG_EQUAL");
+    operator_trie.insert("<=", "LESS_EQUAL");
+    operator_trie.insert(">=", "GREATER_EQUAL");
+    operator_trie.insert("(", "LEFT_PAREN");
+    operator_trie.insert(")", "RIGHT_PAREN");
+    operator_trie.insert("{", "LEFT_BRACE");
+    operator_trie.insert("}", "RIGHT_BRACE");
+    operator_trie.insert(",", "COMMA");
+    operator_trie.insert(".", "DOT");
+    operator_trie.insert("-", "MINUS");
+    operator_trie.insert("+", "PLUS");
+    operator_trie.insert(";", "SEMICOLON");
+    operator_trie.insert("*", "STAR");
+    operator_trie.insert("=", "EQUAL");
+    operator_trie.insert("!", "BANG");
+    operator_trie.insert("<", "LESS");
+    operator_trie.insert(">", "GREATER");
+    operator_trie.insert("/", "SLASH");
+
+    const std::unordered_map<std::string_view, std::string_view> keywords_map =
+        {
+            {"and", "AND"},     {"class", "CLASS"},   {"else", "ELSE"},
+            {"false", "FALSE"}, {"for", "FOR"},       {"fun", "FUN"},
+            {"if", "IF"},       {"nil", "NIL"},       {"or", "OR"},
+            {"print", "PRINT"}, {"return", "RETURN"}, {"super", "SUPER"},
+            {"this", "THIS"},   {"true", "TRUE"},     {"var", "VAR"},
+            {"while", "WHILE"} // Add your Irish keywords here, e.g., {"má",
+                               // "IF_IRISH"}
+        };
 
     auto file_content_optional = read_file_contents(filename_arg);
     if (!file_content_optional) {
@@ -375,36 +339,33 @@ int main(int argc, char *argv[]) {
     int current_line = 1;
     size_t current_pos = 0;
 
-    // Create the list of matcher functions in order of priority
-    std::vector<MatcherFunction> matchers = {
-        scanNewline,       scanWhitespace, scanComment, scanStringLiteral,
-        scanNumberLiteral, // Placeholder, will always return false for now
-        scanWithTrie,      // Handles keywords and operators
-        scanIdentifier     // Placeholder, will always return false for now
-    };
-
     ScanContext ctx(source_view, current_pos, current_line, in_error,
-                    token_matcher_trie);
+                    operator_trie, keywords_map);
 
-    while (current_pos < source_view.length()) {
+    std::vector<MatcherFunction> matchers = {
+        scanNewline,       scanWhitespace,    scanComment,
+        scanStringLiteral, scanNumberLiteral, scanIdentifierOrKeyword,
+        scanOperator};
+
+    while (ctx.current_pos < ctx.source_view.length()) { // Use ctx members
       bool matched_in_iteration = false;
       for (const auto &matcher_func : matchers) {
-        if (matcher_func(ctx)) { // Pass the context by reference
+        if (matcher_func(ctx)) { // Pass the context
           matched_in_iteration = true;
-          break; // Matcher handled this position, restart main while loop
+          break;
         }
       }
 
       if (!matched_in_iteration) {
-        // If no matcher handled it, and we are not at EOF
-        if (current_pos < source_view.length()) {
+        if (ctx.current_pos <
+            ctx.source_view.length()) { // Check not already at EOF
           std::cerr << "[line " << ctx.current_line
                     << "] Error: Unexpected character: "
                     << ctx.source_view[ctx.current_pos] << std::endl;
           ctx.in_error_flag = true;
-          ctx.current_pos++; // Advance past the error character
+          ctx.current_pos++;
         } else {
-          break; // Should be caught by the outer while loop's condition
+          break;
         }
       }
     }
@@ -415,7 +376,6 @@ int main(int argc, char *argv[]) {
     std::cerr << "Unknown command: " << command << std::endl;
     return 1;
   }
-
   if (in_error) {
     return 65;
   }
