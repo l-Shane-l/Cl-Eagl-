@@ -273,23 +273,42 @@ bool scanWithTrie(ScanContext &ctx) {
   return false;
 }
 
-// Placeholder for identifier scanning - to be implemented
+// Helper to check if a character can be the start of an identifier
+bool isIdentifierStart(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+}
+
+// Helper to check if a character can be part of an identifier (after the first
+// char)
+bool isIdentifierChar(char c) {
+  return std::isalpha(static_cast<unsigned char>(c)) ||
+         std::isdigit(static_cast<unsigned char>(c)) || c == '_';
+}
+
 bool scanIdentifier(ScanContext &ctx) {
-  // if (!ctx.isAtEnd() && (std::isalpha(static_cast<unsigned
-  // char>(ctx.currentChar())) || ctx.currentChar() == '_')) {
-  //     // ... Add identifier scanning logic ...
-  //     // After scanning, check if it's a keyword (our Trie already handles
-  //     keywords, so this
-  //     // matcher would be for non-keyword identifiers if Trie only had
-  //     operators, or if
-  //     // Trie had keywords, this logic would be simpler or might not be
-  //     needed if Trie is exhaustive)
-  //     // std::cout << "IDENTIFIER " << lexeme << " null" << std::endl; // or
-  //     actual value if storing
-  //     // ctx.current_pos += length_of_identifier;
-  //     return true;
-  // }
-  return false;
+  if (ctx.isAtEnd() || !isIdentifierStart(ctx.currentChar())) {
+    return false; // Not starting with a character valid for an identifier
+  }
+
+  size_t start_pos = ctx.current_pos;
+  // First char is already confirmed by isIdentifierStart, so consume it
+  ctx.current_pos++;
+
+  // Consume subsequent characters that are part of the identifier
+  while (!ctx.isAtEnd() && isIdentifierChar(ctx.currentChar())) {
+    ctx.current_pos++;
+  }
+
+  std::string_view lexeme =
+      ctx.source_view.substr(start_pos, ctx.current_pos - start_pos);
+
+  // By this point, scanWithTrie (which has higher priority in our matchers
+  // list) would have already matched any keywords. So, if we reach here,
+  // 'lexeme' is a user-defined identifier.
+
+  std::cout << "IDENTIFIER " << lexeme << " null" << std::endl;
+
+  return true; // Successfully scanned an identifier
 }
 
 int main(int argc, char *argv[]) {
