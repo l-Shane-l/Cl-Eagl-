@@ -1,4 +1,6 @@
 #include <cctype> // For std::isspace, std::isdigit, std::isalpha
+#include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <functional> // For std::function
@@ -178,17 +180,80 @@ bool scanStringLiteral(ScanContext &ctx) {
   return false;
 }
 
-// Placeholder for number scanning - to be implemented
+// Helper function to format the double literal value for Lox output
+std::string formatDoubleForLoxLiteral(
+    double val) {   // original_lexeme is not needed with this logic
+  char buffer[128]; // Buffer for snprintf
+
+  double integer_part;
+  // std::modf splits 'val' into its integer and fractional parts.
+  // If the fractional part is 0.0, the number is a whole number.
+  if (std::modf(val, &integer_part) == 0.0) {
+    // It's a whole number (e.g., 42.0, 40.0), format as "XX.0"
+    snprintf(buffer, sizeof(buffer), "%.1f", val);
+  } else {
+    // It has a non-zero fractional part, use %g for compact representation
+    // This handles cases like 9282.7580 -> "9282.758" correctly as per Test
+    // Case 2
+    snprintf(buffer, sizeof(buffer), "%.15g", val);
+  }
+  return std::string(buffer);
+}
+
 bool scanNumberLiteral(ScanContext &ctx) {
-  // if (!ctx.isAtEnd() && std::isdigit(static_cast<unsigned
-  // char>(ctx.currentChar()))) {
-  //     // ... Add number scanning logic here ...
-  //     // std::cout << "NUMBER " << lexeme << " " << literal_value <<
-  //     std::endl;
-  //     // ctx.current_pos += length_of_number;
-  //     return true;
-  // }
-  return false;
+  if (ctx.isAtEnd() ||
+      !std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
+    return false;
+  }
+
+  size_t start_pos = ctx.current_pos;
+
+  // Consume integer part
+  while (!ctx.isAtEnd() &&
+         std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
+    ctx.current_pos++;
+  }
+
+  // Look for fractional part
+  if (!ctx.isAtEnd() && ctx.currentChar() == '.' &&
+      (ctx.current_pos + 1 < ctx.source_view.length() &&
+       std::isdigit(
+           static_cast<unsigned char>(ctx.source_view[ctx.current_pos + 1])))) {
+
+    ctx.current_pos++; // Consume the '.'
+    while (!ctx.isAtEnd() &&
+           std::isdigit(static_cast<unsigned char>(ctx.currentChar()))) {
+      ctx.current_pos++;
+    }
+  }
+
+  std::string_view lexeme =
+      ctx.source_view.substr(start_pos, ctx.current_pos - start_pos);
+
+  double literal_double_val;
+  try {
+    literal_double_val = std::stod(std::string(lexeme));
+  } catch (const std::out_of_range &oor) {
+    std::cerr << "[line " << ctx.current_line
+              << "] Error: Number literal out of range: " << lexeme
+              << std::endl;
+    ctx.in_error_flag = true;
+    return true;
+  } catch (const std::invalid_argument &ia) {
+    std::cerr << "[line " << ctx.current_line
+              << "] Error: Invalid number format (stod failed): " << lexeme
+              << std::endl;
+    ctx.in_error_flag = true;
+    return true;
+  }
+
+  // Use the revised helper function
+  std::string literal_str_output =
+      formatDoubleForLoxLiteral(literal_double_val);
+
+  std::cout << "NUMBER " << lexeme << " " << literal_str_output << std::endl;
+
+  return true;
 }
 
 bool scanWithTrie(ScanContext &ctx) {
