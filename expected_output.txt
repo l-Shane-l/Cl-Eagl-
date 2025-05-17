@@ -1,0 +1,98 @@
+-- Running vcpkg install
+All requested packages are currently installed.
+Total install time: 18.9 us
+-- Running vcpkg install - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/shane/codecrafters-interpreter-cpp/build
+[100%] Built target interpreter
+LEFT_PAREN ( null
+RIGHT_PAREN ) null
+LEFT_BRACE { null
+RIGHT_BRACE } null
+COMMA , null
+DOT . null
+MINUS - null
+PLUS + null
+SEMICOLON ; null
+STAR * null
+SLASH / null
+BANG ! null
+BANG_EQUAL != null
+EQUAL = null
+EQUAL_EQUAL == null
+GREATER > null
+GREATER_EQUAL >= null
+LESS < null
+LESS_EQUAL <= null
+STRING "string" string
+STRING "this is a longer string with spaces" this is a longer string with spaces
+STRING "" 
+NUMBER 123 123.0
+NUMBER 123.456 123.456
+NUMBER 0.0 0.0
+NUMBER 7 7.0
+DOT . null
+IDENTIFIER identifier null
+IDENTIFIER another_ID null
+IDENTIFIER iDeNtIfIeR123 null
+IDENTIFIER _startsWithUnderscore null
+IDENTIFIER variableName null
+AND and null
+CLASS class null
+ELSE else null
+FALSE false null
+FOR for null
+FUN fun null
+IF if null
+NIL nil null
+OR or null
+PRINT print null
+RETURN return null
+SUPER super null
+THIS this null
+TRUE true null
+VAR var null
+WHILE while null
+VAR var null
+IDENTIFIER foo null
+EQUAL = null
+STRING "bar" bar
+SEMICOLON ; null
+VAR var null
+IDENTIFIER num null
+EQUAL = null
+NUMBER 12 12.0
+STAR * null
+LEFT_PAREN ( null
+NUMBER 3 3.0
+PLUS + null
+NUMBER 4.5 4.5
+RIGHT_PAREN ) null
+SLASH / null
+NUMBER 2 2.0
+SEMICOLON ; null
+IF if null
+LEFT_PAREN ( null
+IDENTIFIER foo null
+BANG_EQUAL != null
+NIL nil null
+RIGHT_PAREN ) null
+LEFT_BRACE { null
+PRINT print null
+IDENTIFIER foo null
+SEMICOLON ; null
+RIGHT_BRACE } null
+ELSE else null
+LEFT_BRACE { null
+PRINT print null
+STRING "foo is nil!" foo is nil!
+SEMICOLON ; null
+RIGHT_BRACE } null
+IDENTIFIER foo null
+EQUAL_EQUAL == null
+IDENTIFIER bar null
+VAR var null
+IDENTIFIER on_new_line null
+SEMICOLON ; null
+EOF  null

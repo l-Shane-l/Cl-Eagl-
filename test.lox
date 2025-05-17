@@ -1,1 +1,42 @@
-={===}
+// This is a test.lox file for comprehensive scanner checking.
+// It includes various tokens and edge cases.
+
+// --- Basic Punctuation and Operators ---
+( ) { } , . - + ; * / // Single-character lexemes
+! != = == > >= < <=   // One and two-character lexemes
+
+// --- Literals ---
+"string"
+"this is a longer string with spaces"
+"" // empty string
+123
+123.456
+0.0
+7.
+
+// --- Identifiers ---
+identifier
+another_ID
+iDeNtIfIeR123
+_startsWithUnderscore
+variableName
+
+// --- Keywords ---
+and class else false for fun if nil or
+print return super this true var while
+
+// --- Combinations and Edge Cases ---
+var foo = "bar";
+var num = 12 * (3 + 4.5) / 2;
+if (foo != nil) {
+  print foo;
+} else {
+  print "foo is nil!";
+}
+foo == bar // identifier, op, identifier
+
+// Check correct handling of comments and newlines
+// Next token should be on line 39 (approx)
+var on_new_line;
+
+
