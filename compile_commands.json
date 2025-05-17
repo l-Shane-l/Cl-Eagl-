@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/home/shane/codecrafters-interpreter-cpp/build",
+  "command": "/usr/bin/c++  -I/home/shane/codecrafters-interpreter-cpp/src  -stdlib=libc++ -std=gnu++2b -o CMakeFiles/interpreter.dir/src/main.cpp.o -c /home/shane/codecrafters-interpreter-cpp/src/main.cpp",
+  "file": "/home/shane/codecrafters-interpreter-cpp/src/main.cpp"
+},
+{
+  "directory": "/home/shane/codecrafters-interpreter-cpp/build",
+  "command": "/usr/bin/c++  -I/home/shane/codecrafters-interpreter-cpp/src  -stdlib=libc++ -std=gnu++2b -o CMakeFiles/interpreter.dir/src/scanner/OperatorTrie.cpp.o -c /home/shane/codecrafters-interpreter-cpp/src/scanner/OperatorTrie.cpp",
+  "file": "/home/shane/codecrafters-interpreter-cpp/src/scanner/OperatorTrie.cpp"
+},
+{
+  "directory": "/home/shane/codecrafters-interpreter-cpp/build",
+  "command": "/usr/bin/c++  -I/home/shane/codecrafters-interpreter-cpp/src  -stdlib=libc++ -std=gnu++2b -o CMakeFiles/interpreter.dir/src/scanner/Scanner.cpp.o -c /home/shane/codecrafters-interpreter-cpp/src/scanner/Scanner.cpp",
+  "file": "/home/shane/codecrafters-interpreter-cpp/src/scanner/Scanner.cpp"
+}
+]

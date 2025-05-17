@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(codecrafters-interpreter)
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23) # Enable the C++23 standard
-
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(STATUS "Clang compiler detected. Forcing C++ standard library: libc++")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    list(APPEND CMAKE_EXE_LINKER_FLAGS "-lc++ -lc++abi")
+endif()
 # 1. Define your source files
 # This GLOB_RECURSE will pick up all .cpp and .hpp files in src/ and its subdirectories
 # including src/scanner/Scanner.cpp, src/scanner/OperatorTrie.cpp etc.
@@ -30,4 +34,4 @@ add_executable(interpreter ${SOURCE_FILES})
 target_include_directories(interpreter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Optional: Ensure compile_commands.json is generated for your LSP
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
